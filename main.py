@@ -139,8 +139,8 @@ st.write(y_prediction)
 
 
 st.write("Confusion Matrix for",str(dataset_name),"dataset using",str(classifier_name),"classifier")
-pl = plot_confusion_matrix(clf,x_test,y_test,cmap=plt.cm.Blues)
-st.pyplot(pl)
+plot_confusion_matrix(clf,x_test,y_test,cmap=plt.cm.Blues)
+st.pyplot()
 if(dataset_name=='Breast Cancer'):
     plot_roc_curve(clf,x_test, y_test)
     st.pyplot()
