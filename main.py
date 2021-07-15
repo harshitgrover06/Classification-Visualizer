@@ -1,3 +1,5 @@
+#Importing Libraries
+
 import streamlit as st
 from sklearn import datasets
 import numpy as np
@@ -5,21 +7,28 @@ import pandas as pd
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn import tree
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import precision_score
+from sklearn.metrics import precision_score,accuracy_score,plot_confusion_matrix, plot_roc_curve, plot_precision_recall_curve
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import SGDClassifier
+from sklearn.naive_bayes import GaussianNB
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
-st.title("Various classifiers ")
+st.title("Various classifiers")
 
-st.write("""Explore different classifiers""")
+st.write("""Explore different classifiers and their parameters""")
+link = '[Source Code Repository](https://github.com/harshitgrover06/Classification-Visualizer)'
+st.markdown(link, unsafe_allow_html=True)
+
+profile = "[Linkedin Profile](https://www.linkedin.com/in/harshit-grover-410a641a0/)"
+st.markdown(profile, unsafe_allow_html=True)
+
 arr = list()
 
-dataset_name = st.sidebar.selectbox("Select dataset", ("Iris", "Breast Cancer", "Wine dataset","Choose from your device"))
-st.write(dataset_name)
-classifier_name = st.sidebar.selectbox("Select classifer",("KNN", "Decision Tree","SVM", "Random Forest"))
+dataset_name = st.sidebar.selectbox("Select dataset", ("Iris", "Breast Cancer", "Wine dataset"))
+st.write(str(dataset_name),"Dataset")
+classifier_name = st.sidebar.selectbox("Select classifer",("KNN", "Decision Tree","Gradient Descent","SVM","Naive Bayes","Random Forest"))
 global df
 
 def get_datset(dataset_name):
@@ -29,17 +38,17 @@ def get_datset(dataset_name):
         fdata = datasets.load_breast_cancer()
     elif dataset_name=="Wine dataset":
         fdata = datasets.load_wine()
-    elif dataset_name=="Choose from your device":
-        uploaded_file = st.sidebar.file_uploader(label="Upload your CSV or Excel file ", type=['csv', 'xlsx', 'xlx'])
-        if uploaded_file is not None:
-            print("Success")
-            try:
-                df = pd.read_csv(uploaded_file)
-            except Exception as e:
-                print("exception")
-                df = pd.read_excel(uploaded_file)
-        st.write("Uploaded data is as follows")
-        st.write(df)
+    # elif dataset_name=="Choose from your device":
+    #     uploaded_file = st.sidebar.file_uploader(label="Upload your CSV or Excel file ", type=['csv', 'xlsx', 'xlx'])
+    #     if uploaded_file is not None:
+    #         print("Success")
+    #         try:
+    #             df = pd.read_csv(uploaded_file)
+    #         except Exception as e:
+    #             print("exception")
+    #             df = pd.read_excel(uploaded_file)
+    #     st.write("Uploaded data is as follows")
+    #     st.write(df)
     x = fdata.data
     y = fdata.target
     arr = fdata.target_names
@@ -79,6 +88,13 @@ def variable_k(classifier_name):
         no_estimator = st.sidebar.slider("no of estimators", 1, 100)
         p["maximum_depth"] = maximum_depth
         p["no_estimator"] = no_estimator
+    elif classifier_name == "Gradient Descent":
+        max_iter = st.sidebar.slider("Max_Iterations",1,20)
+        p["max_iter"] = max_iter
+        loss = st.sidebar.selectbox('loss', ('hinge', 'modified_huber','log'))
+        p["loss"] = loss
+        penalty = st.sidebar.selectbox('penalty', ('l1', 'l2','elasticnet'))
+        p["penalty"] = penalty
     return p
 
 p = variable_k(classifier_name)
@@ -94,6 +110,11 @@ def get_classifier(classifier_name,p):
         clf = SVC(C=p["C"],probability=True)
     elif classifier_name=="Random Forest":
         clf  = RandomForestClassifier(n_estimators=p["no_estimator"], max_depth=p["maximum_depth"],random_state=1)
+    elif classifier_name=="Gradient Descent":
+        clf = SGDClassifier(loss=p["loss"],penalty=p["penalty"],max_iter=p["max_iter"])
+    elif classifier_name == "Naive Bayes":
+        clf = GaussianNB()
+
     return clf
 clf = get_classifier(classifier_name,p)
 #classification
@@ -114,6 +135,35 @@ st.write("Test Data")
 st.write(x_test)
 st.write("Predicted Output for Test data")
 st.write(y_prediction)
+#plotting
+
+
+st.write("Confusion Matrix for",str(dataset_name),"dataset using",str(classifier_name),"classifier")
+plot_confusion_matrix(clf,x_test,y_test,cmap=plt.cm.Blues)
+st.pyplot()
+if(dataset_name=='Breast Cancer'):
+    plot_roc_curve(clf,x_test, y_test)
+    st.pyplot()
+
+    plot_precision_recall_curve(clf,x_test, y_test)
+    st.pyplot()
+else:
+    st.write(str(dataset_name),"dataset is not a binary classification Dataset !!")
+#Test data vs accuracy
+acc_lst = []
+test_szlist = []
+
+if(classifier_name!='Gradient Descent'):
+    for i in range(1,100,1):
+        x_train1, x_test1, y_train1, y_test1 = train_test_split(x, y, test_size=i/100, random_state=1)
+        clfnew = clf.fit(x_train1, y_train1)
+        y_predictionnew = clf.predict(x_test1)
+        test_szlist.append(i/100)
+        accuracynew = accuracy_score(y_test1, y_predictionnew)
+        acc_lst.append(accuracynew)
+    chart_data = pd.DataFrame(acc_lst,test_szlist,columns=['Accuracy wrt test data size'])
+    st.line_chart(chart_data)
+
 
 #Applying PCA and reducing it to 2 dimension
 
